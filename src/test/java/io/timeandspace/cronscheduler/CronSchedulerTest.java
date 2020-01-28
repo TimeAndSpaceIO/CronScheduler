@@ -28,6 +28,8 @@ import java.util.concurrent.FutureTask;
 import java.util.stream.Collectors;
 
 import static io.timeandspace.cronscheduler.ScheduledExecutorTest.ONE_SEC;
+import static java.time.Duration.ofHours;
+import static java.time.Duration.ofMinutes;
 import static java.time.ZoneOffset.UTC;
 import static java.time.ZonedDateTime.of;
 import static java.util.concurrent.TimeUnit.*;
@@ -52,12 +54,12 @@ public class CronSchedulerTest {
         final ZonedDateTime dt = of(
                 LocalDateTime.of(2019, 4, 7, 1, 29), LORD_HOWE_TZ);
         final SpeedHistoricalClock clock =
-                new SpeedHistoricalClock(Instant.from(dt), Duration.ofMinutes(10), ONE_SEC);
+                new SpeedHistoricalClock(Instant.from(dt), ONE_SEC, ofMinutes(10));
         final CronScheduler s = CronScheduler.newBuilder(ONE_SEC).setTimeProvider(clock).build();
         try (AutoCloseable ignore = asCloseable(s)) {
             final TimesRecordingCronTask task = new TimesRecordingCronTask(4);
             final Future<?> f =
-                    s.scheduleAtRoundTimesInDay(Duration.ofMinutes(18), LORD_HOWE_TZ, task);
+                    s.scheduleAtRoundTimesInDay(ofMinutes(18), LORD_HOWE_TZ, task);
             Awaitility.await().atMost(Duration.ofSeconds(10)).until(f::isDone);
 
             final ZonedDateTime firstTime = of(LocalDateTime.of(2019, 4, 7, 1, 30), LORD_HOWE_TZ);
@@ -78,10 +80,9 @@ public class CronSchedulerTest {
         try (AutoCloseable ignore = asCloseable(s)) {
             final TimesRecordingCronTask task = new TimesRecordingCronTask(2);
             final Future<?> f = s.scheduleAtRoundTimesInDaySkippingToLatest(
-                    Duration.ofMinutes(1), UTC, task);
+                    ofMinutes(1), UTC, task);
             final Instant oneHourAfterEpoch = Instant.EPOCH.plus(Duration.ofHours(1));
-            // Gives opportunity to the EPOCH run time to be fired
-            Thread.sleep(1_000);
+            task.awaitNumRunTimes(1, 10, SECONDS);
             clock.currentTime = oneHourAfterEpoch;
             Awaitility.await().atMost(Duration.ofSeconds(10)).until(f::isDone);
 
@@ -100,8 +101,7 @@ public class CronSchedulerTest {
             final TimesRecordingCronTask task = new TimesRecordingCronTask(2);
             final Future<?> f = s.scheduleAtRoundTimesInDaySkippingToLatest(
                     Duration.ofSeconds(MINUTES.toSeconds(22) + 30), LORD_HOWE_TZ, task);
-            // Gives opportunity to the `day` run time to be fired
-            Thread.sleep(1_000);
+            task.awaitNumRunTimes(1, 10, SECONDS);
             clock.currentTime = nextDay;
             Awaitility.await().atMost(Duration.ofSeconds(10)).until(f::isDone);
 
@@ -117,42 +117,38 @@ public class CronSchedulerTest {
         final CronScheduler s = CronScheduler.newBuilder(ONE_SEC).setTimeProvider(clock).build();
         try (AutoCloseable ignore = asCloseable(s)) {
             CountDownLatch clockRewindObserved = new CountDownLatch(1);
+            CountDownLatch taskRunFirstTime = new CountDownLatch(1);
             CronTask task = new CronTask() {
                 long lastScheduledRunTimeMillis = 0;
                 @Override
-                public void run(long scheduledRunTimeMillis) throws Exception {
+                public void run(long scheduledRunTimeMillis) {
                     if (scheduledRunTimeMillis < lastScheduledRunTimeMillis) {
                         clockRewindObserved.countDown();
                     }
                     lastScheduledRunTimeMillis = scheduledRunTimeMillis;
+                    taskRunFirstTime.countDown();
                 }
             };
             s.scheduleAtFixedRate(0, 1, SECONDS, task);
-            final Instant oneHourAfterEpoch = Instant.EPOCH.plus(Duration.ofHours(1));
-            // Gives opportunity to the `dt` run time to be fired
-            Thread.sleep(1_000);
+            assertThat(taskRunFirstTime.await(10, SECONDS)).isTrue();
             clock.currentTime = dt.minus(Duration.ofSeconds(5)).toInstant();
-            clockRewindObserved.await(10, SECONDS);
+            assertThat(clockRewindObserved.await(10, SECONDS)).isTrue();
         }
     }
 
     @Test
     public void testScheduleAtRoundTimesInDayDstClockRewind() throws Exception {
         final ZonedDateTime dt = of(LocalDateTime.of(2019, 4, 7, 2, 1), LORD_HOWE_TZ);
-        final SpeedHistoricalClock clock =
-                new SpeedHistoricalClock(Instant.from(dt), Duration.ofMinutes(10), ONE_SEC);
+        final SpeedHistoricalClock clock = new SpeedHistoricalClock(Instant.from(dt), ONE_SEC,
+                ofMinutes(10), ofHours(-1), ofMinutes(10));
         final CronScheduler s = CronScheduler.newBuilder(ONE_SEC).setTimeProvider(clock).build();
         try (AutoCloseable ignore = asCloseable(s)) {
             final TimesRecordingCronTask task = new TimesRecordingCronTask(4);
             final Future<?> f =
-                    s.scheduleAtRoundTimesInDay(Duration.ofMinutes(18), LORD_HOWE_TZ, task);
-            // Gives opportunity to the `dt` run time to be fired
-            Thread.sleep(1_000);
-            clock.insertRewind(Duration.ofHours(1));
+                    s.scheduleAtRoundTimesInDay(ofMinutes(18), LORD_HOWE_TZ, task);
             Awaitility.await().atMost(Duration.ofSeconds(10)).until(f::isDone);
 
             final List<ZonedDateTime> runTimes = task.getRunTimes(LORD_HOWE_TZ);
-            System.out.println(runTimes);
             assertThat(runTimes.get(runTimes.size() - 1)).isBefore(runTimes.get(0));
             assertThat(runTimes.stream().map(t -> getOffset(t)).collect(Collectors.toSet()))
                     .size().isGreaterThan(1);

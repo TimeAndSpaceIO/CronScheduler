@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+@SuppressWarnings("NonAtomicOperationOnVolatileField")
 final class SpeedHistoricalClock extends Clock implements AutoCloseable {
 
     private final ScheduledExecutorService executor =
@@ -28,17 +29,18 @@ final class SpeedHistoricalClock extends Clock implements AutoCloseable {
 
     private volatile Instant currentTime;
 
-    public SpeedHistoricalClock(Instant epoch, Duration clockTick, Duration realTimeTick) {
+    public SpeedHistoricalClock(Instant epoch, Duration realTimeTick, Duration... clockTicks) {
         this.currentTime = epoch;
-        executor.scheduleAtFixedRate(() -> {
-            currentTime = currentTime.plus(clockTick);
-        }, realTimeTick.toNanos(), realTimeTick.toNanos(), TimeUnit.NANOSECONDS);
-    }
 
-    void insertRewind(Duration duration) {
-        executor.submit(() -> {
-            currentTime = currentTime.minus(duration);
-        });
+        executor.scheduleAtFixedRate(new Runnable() {
+            int tickNum = 0;
+            @Override
+            public void run() {
+                Duration clockTick = clockTicks[Math.min(tickNum, clockTicks.length - 1)];
+                currentTime = currentTime.plus(clockTick);
+                tickNum++;
+            }
+        }, realTimeTick.toNanos(), realTimeTick.toNanos(), TimeUnit.NANOSECONDS);
     }
 
     @Override

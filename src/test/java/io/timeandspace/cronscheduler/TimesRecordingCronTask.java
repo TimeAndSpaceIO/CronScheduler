@@ -21,9 +21,13 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Phaser;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 final class TimesRecordingCronTask implements CronTask {
+    private final Phaser numRunTimesCounter = new Phaser(1);
     private final int maxTimes;
     final List<Long> runTimes = new ArrayList<>();
 
@@ -34,8 +38,16 @@ final class TimesRecordingCronTask implements CronTask {
     @Override
     public void run(long scheduledRunTimeMillis) throws Exception {
         runTimes.add(scheduledRunTimeMillis);
+        numRunTimesCounter.arrive();
         if (runTimes.size() == maxTimes) {
             throw new Exception(); // Let the periodic task stop executing
+        }
+    }
+
+    void awaitNumRunTimes(int n, long timeout, TimeUnit unit)
+            throws TimeoutException, InterruptedException {
+        for (int currentNumRunTimes; (currentNumRunTimes = numRunTimesCounter.getPhase()) < n;) {
+            numRunTimesCounter.awaitAdvanceInterruptibly(currentNumRunTimes, timeout, unit);
         }
     }
 
