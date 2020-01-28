@@ -1,2 +1,8 @@
 # Default ignored files
 /workspace.xml
+
+/gradle.xml
+/jarRepositories.xml
+/misc.xml
+/sbt.xml
+/vcs.xml
