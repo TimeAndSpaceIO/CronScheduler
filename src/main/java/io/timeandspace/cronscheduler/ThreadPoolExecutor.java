@@ -1082,7 +1082,7 @@ abstract class ThreadPoolExecutor {
      * @param task the task to remove
      * @return {@code true} if the task was removed
      */
-    boolean remove(Runnable task) {
+    boolean remove(ScheduledFutureTask<?> task) {
         boolean removed = workQueue.remove(task);
         tryTerminate(); // In case SHUTDOWN and now empty
         return removed;
@@ -1112,9 +1112,12 @@ abstract class ThreadPoolExecutor {
             // Take slow path if we encounter interference during traversal.
             // Make copy for traversal and call remove for cancelled entries.
             // The slow path is more likely to be O(N*N).
-            for (Object r : q.toArray())
-                if (r instanceof Future<?> && ((Future<?>)r).isCancelled())
-                    q.remove(r);
+            //noinspection Java8CollectionRemoveIf
+            for (ScheduledFutureTask<?> t : q.toArray(new ScheduledFutureTask<?>[0])) {
+                if (t.isCancelled()) {
+                    q.remove(t);
+                }
+            }
         }
 
         tryTerminate(); // In case SHUTDOWN and now empty

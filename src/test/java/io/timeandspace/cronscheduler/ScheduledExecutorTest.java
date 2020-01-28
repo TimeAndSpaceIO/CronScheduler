@@ -439,7 +439,8 @@ public class ScheduledExecutorTest extends JSR166TestCase {
         final CountDownLatch done = new CountDownLatch(1);
         final CronScheduler p = CronScheduler.create(ONE_SEC);
         try (PoolCleaner cleaner = cleaner(p.asScheduledExecutorService(), done)) {
-            ScheduledFuture[] tasks = new ScheduledFuture[5];
+            ScheduledThreadPoolExecutor.ScheduledFutureTask<?>[] tasks =
+                    new ScheduledThreadPoolExecutor.ScheduledFutureTask<?>[5];
             final CountDownLatch threadStarted = new CountDownLatch(1);
             for (int i = 0; i < tasks.length; i++) {
                 Runnable r = new CheckedRunnable() {
@@ -447,19 +448,20 @@ public class ScheduledExecutorTest extends JSR166TestCase {
                         threadStarted.countDown();
                         await(done);
                     }};
-                tasks[i] = p.asScheduledExecutorService().schedule(r, 1, MILLISECONDS);
+                tasks[i] = (ScheduledThreadPoolExecutor.ScheduledFutureTask<?>)
+                        p.asScheduledExecutorService().schedule(r, 1, MILLISECONDS);
             }
             await(threadStarted);
             Collection<? extends Future<?>> q = p.getTasks();
-            assertFalse(p.remove((Runnable)tasks[0]));
-            assertTrue(q.contains((Runnable)tasks[4]));
-            assertTrue(q.contains((Runnable)tasks[3]));
-            assertTrue(p.remove((Runnable)tasks[4]));
-            assertFalse(p.remove((Runnable)tasks[4]));
-            assertFalse(q.contains((Runnable)tasks[4]));
-            assertTrue(q.contains((Runnable)tasks[3]));
-            assertTrue(p.remove((Runnable)tasks[3]));
-            assertFalse(q.contains((Runnable)tasks[3]));
+            assertFalse(p.remove(tasks[0]));
+            assertTrue(q.contains(tasks[4]));
+            assertTrue(q.contains(tasks[3]));
+            assertTrue(p.remove(tasks[4]));
+            assertFalse(p.remove(tasks[4]));
+            assertFalse(q.contains(tasks[4]));
+            assertTrue(q.contains(tasks[3]));
+            assertTrue(p.remove(tasks[3]));
+            assertFalse(q.contains(tasks[3]));
         }
     }
 

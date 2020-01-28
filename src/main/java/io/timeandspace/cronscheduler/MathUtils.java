@@ -19,13 +19,6 @@ package io.timeandspace.cronscheduler;
 final class MathUtils {
     private MathUtils() {}
 
-    static long gcd(long a, long b) {
-        if (a < 0 || b < 0) {
-            throw new AssertionError();
-        }
-        return a == 0 ? b : gcd(b % a, a);
-    }
-
     static long roundDown(long x, long n) {
         if (x < 0 || n < 1) {
             throw new AssertionError();
