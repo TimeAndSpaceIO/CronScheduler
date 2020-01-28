@@ -1,0 +1,19 @@
+<component name="ProjectCodeStyleConfiguration">
+  <code_scheme name="Project" version="173">
+    <option name="RIGHT_MARGIN" value="100" />
+    <ScalaCodeStyleSettings>
+      <option name="addFullQualifiedImports" value="false" />
+      <option name="collectImports" value="false" />
+      <option name="doNotChangeLocalImportsOnOptimize" value="false" />
+      <option name="importShortestPathForAmbiguousReferences" value="false" />
+      <option name="sortImports" value="false" />
+      <option name="INDENT_FIRST_PARAMETER" value="false" />
+      <option name="SCALAFMT_CONFIG_PATH" value="$USER_HOME$/centrica/tools/scalafmt/.scalafmt.conf" />
+      <option name="FORMATTER" value="1" />
+      <option name="USE_SCALADOC2_FORMATTING" value="true" />
+    </ScalaCodeStyleSettings>
+    <codeStyleSettings language="JAVA">
+      <option name="ALIGN_MULTILINE_PARAMETERS" value="false" />
+    </codeStyleSettings>
+  </code_scheme>
+</component>

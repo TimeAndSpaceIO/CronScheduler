@@ -1,0 +1,12 @@
+Generic term "time" is used throughout this project to refer to instant/current/unix time, not wall
+clock time. Wall clock time could be referred as "wall time" or "clock time", but not just "time".
+The exception is the naming of "scheduleAtRoundTimesInDay" methods, where the wall clock time is
+meant, but neither "clock" nor "wall" appears; "InDay" part is meant to convey the wall clock time
+meaning.
+
+Clock concept is tied to time zones; "clock" term is avoided when time zones are not an immediate
+concern. The exception is the "clock drift" term because it is widely used and known, although it's
+not actually about clock drift, but rather about time drift, in this project's terms.
+
+Time jumps are referred as "shifts", clock jumps are referred as "changes". Other terms like "jump"
+or "cutover" are avoided.
