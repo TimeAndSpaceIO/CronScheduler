@@ -62,5 +62,8 @@ cron.scheduleAtRoundTimesInDaySkippingToLatest(oneHour, ZoneId.systemDefault(), 
 });
 ```
 
+For drop-in replacement of `ScheduledThreadPoolExecutor` and integration with existing code, there
+is an adapter: `cronScheduler.asScheduledExecutorService()`.
+
 See [**Javadocs**](
 https://javadoc.io/doc/io.timeandspace/cron-scheduler/latest/io/timeandspace/cronscheduler/CronScheduler.html).
